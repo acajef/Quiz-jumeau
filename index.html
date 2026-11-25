@@ -84,7 +84,7 @@ footer .in{max-width:640px;margin:0 auto}
 </div></footer>
 <script>
 (function(){
-var TOPIC="dv-jn-55b3156ca1f8";
+var TOPIC="dv-jn-55b3156ca1f8",RELAYS=["https://ntfy.envs.net", "https://ntfy.adminforge.de", "https://ntfy.sh"];
 var q=(new URLSearchParams(location.search).get("q")||"q1").replace(/[^a-z0-9]/gi,"").slice(0,8)||"q1";
 document.getElementById("kick").textContent=q==="q1"?"Question":"Question · 2e tour";
 var vid;
@@ -96,10 +96,18 @@ btns.forEach(function(b){b.addEventListener("click",function(){
  send.disabled=false;err.textContent="";});});
 send.addEventListener("click",function(){
  if(!choix)return;send.disabled=true;send.textContent="Envoi…";
- fetch("https://ntfy.sh/"+TOPIC,{method:"POST",body:JSON.stringify({q:q,r:choix,v:vid,t:Date.now()})})
- .then(function(r){if(!r.ok)throw new Error(r.status);document.body.classList.add("done");window.scrollTo(0,0);})
- .catch(function(){err.textContent="Envoi impossible. Vérifiez la connexion et réessayez.";send.disabled=false;})
- .finally(function(){send.textContent="Envoyer";});
+ var body=JSON.stringify({q:q,r:choix,v:vid,t:Date.now()}),reste=RELAYS.length,ok=false;
+ function fin(succes){
+  if(ok)return;
+  if(succes){ok=true;document.body.classList.add("done");window.scrollTo(0,0);send.textContent="Envoyer";return;}
+  if(--reste===0){err.textContent="Envoi impossible. Vérifiez la connexion et réessayez.";send.disabled=false;send.textContent="Envoyer";}
+ }
+ RELAYS.forEach(function(u){
+  var ctl=window.AbortController?new AbortController():null;
+  var to=setTimeout(function(){if(ctl)ctl.abort();},8000);
+  fetch(u+"/"+TOPIC,{method:"POST",body:body,signal:ctl?ctl.signal:undefined})
+   .then(function(r){clearTimeout(to);fin(r.ok);},function(){clearTimeout(to);fin(false);});
+ });
 });
 document.getElementById("again").addEventListener("click",function(){document.body.classList.remove("done");});
 })();
